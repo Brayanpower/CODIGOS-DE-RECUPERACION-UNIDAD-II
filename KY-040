@@ -1,0 +1,45 @@
+from machine import Pin, SoftI2C
+from time import sleep_ms
+import ssd1306
+
+# Definimos el número de pin para los pines del encoder rotatorio KY-040
+ENCODER_A_PIN = 32
+ENCODER_B_PIN = 33
+
+# Declaramos objeto con los pines utilizados para la interfaz I2C
+i2c = SoftI2C(sda=Pin(21), scl=Pin(22))
+
+# Declaramos objeto de display OLED
+display = ssd1306.SSD1306_I2C(128, 64, i2c)
+
+# Inicializamos el valor del encoder a 0
+encoder_value = 0
+
+# Configuramos los pines del encoder rotatorio
+encoder_a = Pin(ENCODER_A_PIN, Pin.IN)
+encoder_b = Pin(ENCODER_B_PIN, Pin.IN)
+
+# Función para manejar la interrupción del encoder rotatorio
+def encoder_isr(pin):
+    global encoder_value
+    A = encoder_a.value()
+    B = encoder_b.value()
+    if A != B:
+        encoder_value -= 1
+    else:
+        encoder_value += 1
+
+# Asociamos la función de interrupción al pin del encoder A
+encoder_a.irq(trigger=Pin.IRQ_RISING, handler=encoder_isr)
+
+# Función para mostrar el valor del encoder en el display OLED
+def display_encoder_value(value):
+    display.fill(0)  # Limpiamos el display
+    display.text("Encoder Value:", 0, 0)  # Mostramos el texto
+    display.text(str(value), 0, 20)  # Mostramos el valor del encoder
+    display.show()  # Actualizamos el display
+
+# Bucle principal
+while True:
+    display_encoder_value(encoder_value)  # Mostramos el valor del encoder en el OLED
+    sleep_ms(100)  # Esperamos un corto periodo para evitar saturar la CPU
