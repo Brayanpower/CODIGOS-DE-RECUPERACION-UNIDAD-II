@@ -1,0 +1,34 @@
+from machine import Pin, I2C, ADC
+import ssd1306
+import time
+
+# Definir el pin de señal para el sensor KY-032
+PIN_SIGNAL = 4
+
+# Configuración de la pantalla OLED
+i2c = I2C(scl=Pin(22), sda=Pin(21))  # Usar los pines 21 y 22 para I2C
+oled = ssd1306.SSD1306_I2C(128, 64, i2c)
+
+# Configurar el ADC para leer el valor analógico del sensor KY-032
+adc = ADC(Pin(PIN_SIGNAL))
+
+# Función para mostrar el mensaje en la pantalla OLED
+def mostrar_mensaje(mensaje):
+    oled.fill(0)  # Borra la pantalla
+    oled.text(mensaje, 0, 0)  # Muestra el mensaje en la pantalla
+    oled.show()  # Actualiza la pantalla
+
+# Ciclo principal
+while True:
+    # Leer el valor analógico del sensor KY-032
+    analog_value = adc.read()
+
+    # Determinar si se detecta un objeto basado en el valor analógico
+    if analog_value > 2000:
+        print("Objeto detectado")
+        mostrar_mensaje("Objeto detectado")
+    else:
+        print("No hay objeto")
+        mostrar_mensaje("No hay objeto")
+
+    time.sleep(15)
