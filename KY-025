@@ -1,0 +1,37 @@
+from machine import Pin, I2C, ADC
+import ssd1306
+import time
+
+# Definir los pines
+PIN_MAGNETIC_ANALOG = 36
+PIN_MAGNETIC_DIGITAL = 4
+
+# Configuración de la pantalla OLED
+i2c = I2C(scl=Pin(22), sda=Pin(21))  # Usar los pines 21 y 22 para I2C
+oled = ssd1306.SSD1306_I2C(128, 64, i2c)
+
+# Configurar el ADC para leer el valor analógico del sensor magnético
+adc = ADC(Pin(PIN_MAGNETIC_ANALOG))
+adc.atten(ADC.ATTN_11DB)  # Configurar atenuación para 0-3.6V
+
+# Configurar el pin del sensor magnético como entrada
+magnetic_digital = Pin(PIN_MAGNETIC_DIGITAL, Pin.IN)
+
+# Función para mostrar el mensaje en la pantalla OLED
+def mostrar_mensaje(mensaje):
+    oled.fill(0)  # Borra la pantalla
+    oled.text(mensaje, 0, 0)  # Muestra el mensaje en la pantalla
+    oled.show()  # Actualiza la pantalla
+
+# Ciclo principal
+while True:
+    magnetic_state = magnetic_digital.value()  # Leer el valor digital del sensor magnético
+
+    if magnetic_state == 1:
+        print("Campo magnético detectado")
+        mostrar_mensaje("Campo magnético detectado")
+    else:
+        print("No hay campo magnético")
+        mostrar_mensaje("No hay campo magnético")
+
+    time.sleep(15)
