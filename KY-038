@@ -1,0 +1,78 @@
+from machine import Pin, SoftI2C
+from time import sleep_ms
+import ssd1306
+import utime
+
+# Definimos el número de pin para el sensor KY-039
+pin_ky = 4
+
+# Configuramos el pin del sensor KY-039 como entrada digital
+ky = Pin(pin_ky, Pin.IN)
+
+# Declaramos un objeto con los pines utilizados para la interfaz I2C
+i2c = SoftI2C(sda=Pin(21), scl=Pin(22))
+
+# Declaramos objeto de display OLED
+display = ssd1306.SSD1306_I2C(128, 64, i2c)
+
+samp_siz = 4
+rise_threshold = 4
+
+def calculate_beat_rate(first, second, third):
+    return 60000 / (0.4 * first + 0.3 * second + 0.3 * third)
+
+def detect_pulse(sensor_pin):
+    reads = [0] * samp_siz
+    sum_reads = 0
+    ptr = 0
+    last = reader = start = 0
+    first = second = third = before = print_value = 0
+    rising = False
+    rise_count = 0
+    last_beat = 0
+    
+    while True:
+        # Calcular el promedio del sensor durante un período de 20 ms
+        n = 0
+        start = utime.ticks_ms()
+        reader = 0
+        while utime.ticks_diff(utime.ticks_ms(), start) < 20:
+            reader += sensor_pin.value()
+            n += 1
+        reader /= n  # Obtenemos un promedio
+        
+        # Agregar la nueva medición al array y restar la más antigua
+        sum_reads -= reads[ptr]
+        sum_reads += reader
+        reads[ptr] = reader
+        last = sum_reads / samp_siz
+        
+        # Comprobar si la curva está aumentando (un latido)
+        if last > before:
+            rise_count += 1
+            if not rising and rise_count > rise_threshold:
+                # Hemos detectado un aumento de la curva, lo que implica un latido.
+                # Registrar el tiempo desde el último latido y llevar un seguimiento de los dos tiempos anteriores (first, second, third) para obtener un promedio ponderado.
+                rising = True
+                first = utime.ticks_diff(utime.ticks_ms(), last_beat)
+                last_beat = utime.ticks_ms()
+
+                # Calcular el promedio ponderado de la frecuencia cardíaca según los tres últimos latidos
+                print_value = calculate_beat_rate(first, second, third)
+                display.fill(0)
+                display.text("Pulso detectado", 0, 0)
+                display.text("Freq: {:.2f} bpm".format(print_value), 0, 20)
+                display.show()
+
+                third = second
+                second = first
+        else:
+            rising = False
+            rise_count = 0
+        
+        before = last
+        
+        ptr = (ptr + 1) % samp_siz
+        sleep_ms(20)
+
+detect_pulse(ky)
